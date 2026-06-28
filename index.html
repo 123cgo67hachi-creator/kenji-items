@@ -6,32 +6,20 @@
 <title>けんじのオススメアイテム</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   background: #f5f5f7;
   color: #1d1d1f;
   min-height: 100vh;
 }
-
 .header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: white;
   padding: 2rem 1rem 1.5rem;
   text-align: center;
 }
-
-.header h1 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-bottom: 0.3rem;
-}
-
-.header p {
-  font-size: 0.8rem;
-  opacity: 0.7;
-}
-
+.header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.3rem; }
+.header p { font-size: 0.8rem; opacity: 0.7; }
 .pr-badge {
   display: inline-block;
   background: rgba(255,255,255,0.15);
@@ -41,7 +29,6 @@ body {
   border-radius: 4px;
   margin-top: 0.5rem;
 }
-
 .search-container {
   padding: 1rem;
   position: sticky;
@@ -49,7 +36,6 @@ body {
   z-index: 10;
   background: #f5f5f7;
 }
-
 .search-input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 2.5rem;
@@ -61,11 +47,7 @@ body {
   outline: none;
   transition: box-shadow 0.2s;
 }
-
-.search-input:focus {
-  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
-}
-
+.search-input:focus { box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
 .search-icon {
   position: absolute;
   left: 1.75rem;
@@ -74,21 +56,13 @@ body {
   color: #999;
   font-size: 1rem;
 }
-
-.count {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #888;
-  padding: 0.25rem 0 0.5rem;
-}
-
+.count { text-align: center; font-size: 0.75rem; color: #888; padding: 0.25rem 0 0.5rem; }
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
   padding: 0 1rem 2rem;
 }
-
 .card {
   background: white;
   border-radius: 16px;
@@ -98,11 +72,7 @@ body {
   display: flex;
   flex-direction: column;
 }
-
-.card:active {
-  transform: scale(0.97);
-}
-
+.card:active { transform: scale(0.97); }
 .card-thumb {
   width: 100%;
   aspect-ratio: 1;
@@ -114,13 +84,7 @@ body {
   font-size: 2rem;
   overflow: hidden;
 }
-
-.card-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .card-body {
   padding: 0.6rem 0.75rem;
   flex: 1;
@@ -128,7 +92,6 @@ body {
   flex-direction: column;
   gap: 0.4rem;
 }
-
 .card-name {
   font-size: 0.8rem;
   font-weight: 600;
@@ -138,12 +101,7 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.card-date {
-  font-size: 0.65rem;
-  color: #999;
-}
-
+.card-date { font-size: 0.65rem; color: #999; }
 .card-btn {
   display: block;
   text-align: center;
@@ -157,23 +115,9 @@ body {
   margin-top: auto;
   transition: background 0.15s;
 }
-
-.card-btn:hover {
-  background: #a00;
-}
-
-.card-btn.disabled {
-  background: #ccc;
-  pointer-events: none;
-}
-
-.no-results {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 3rem 1rem;
-  color: #999;
-}
-
+.card-btn:hover { background: #a00; }
+.card-btn.disabled { background: #ccc; pointer-events: none; }
+.no-results { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #999; }
 .footer {
   text-align: center;
   padding: 1.5rem;
@@ -182,10 +126,7 @@ body {
   border-top: 1px solid #e5e5ea;
   background: white;
 }
-
-@media (min-width: 480px) {
-  .grid { grid-template-columns: repeat(3, 1fr); }
-}
+@media (min-width: 480px) { .grid { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 768px) {
   .grid { grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 0 2rem 2rem; }
   .search-container { padding: 1rem 2rem; }
@@ -193,45 +134,33 @@ body {
 </style>
 </head>
 <body>
-
 <div class="header">
   <h1>けんじのオススメアイテム</h1>
   <p>TikTokで紹介した商品まとめ</p>
   <span class="pr-badge">広告・PR</span>
 </div>
-
 <div class="search-container" style="position:sticky; top:0;">
   <span class="search-icon">&#128269;</span>
   <input type="text" class="search-input" placeholder="商品を検索..." id="searchInput">
 </div>
-
 <div class="count" id="countText"></div>
-
 <div class="grid" id="productGrid"></div>
-
 <div class="footer">
-  <p>最終更新: 2026-06-28 06:14</p>
-  <p style="margin-top:4px;">※ リンク先は楽天市場です。価格・在庫は変動する場合があります。</p>
+  <p>最終更新: 2026-06-28 14:53</p>
+  <p style="margin-top:4px;">※ 価格・在庫は変動する場合があります。</p>
 </div>
-
 <script>
-const products = [{"name": "超音波防虫器", "rakuten_url": "", "thumb_url": "", "date": "2026-06-17"}, {"name": "Hoshiakari シーリングファンライト", "rakuten_url": "", "thumb_url": "", "date": "2026-06-15"}, {"name": "車フロントガラス用サンシェード", "rakuten_url": "", "thumb_url": "", "date": "2026-06-15"}, {"name": "こどもアウトプット図鑑", "rakuten_url": "", "thumb_url": "", "date": "2026-06-15"}, {"name": "電気殺虫機", "rakuten_url": "", "thumb_url": "", "date": "2026-06-13"}, {"name": "かわすい うなぎ", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "ボトルショルダー", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "松屋 うなぎは", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "HUAWEI FreeClip2", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "HUAWEI Band11", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "3in1充電器", "rakuten_url": "", "thumb_url": "", "date": "2026-06-10"}, {"name": "炭酸水", "rakuten_url": "", "thumb_url": "", "date": "2026-06-02"}, {"name": "助手席バッグ", "rakuten_url": "", "thumb_url": "", "date": "2026-06-02"}, {"name": "炭酸水筒", "rakuten_url": "", "thumb_url": "", "date": "2026-06-02"}, {"name": "サンシェード", "rakuten_url": "", "thumb_url": "", "date": "2026-06-01"}, {"name": "ストリームコントローラー", "rakuten_url": "", "thumb_url": "", "date": "2026-06-01"}, {"name": "冷感布団", "rakuten_url": "", "thumb_url": "", "date": "2026-05-30"}, {"name": "排水口", "rakuten_url": "", "thumb_url": "", "date": "2026-05-28"}, {"name": "シェイバー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "スマートウォッチ", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "布団クリーナー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "レディースシェーバー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "ポータブル電源", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "腰付ファン", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "光脱毛機", "rakuten_url": "", "thumb_url": "", "date": "2026-05-21"}, {"name": "タブレット", "rakuten_url": "", "thumb_url": "", "date": "2026-05-21"}, {"name": "バッテリー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-19"}, {"name": "折り畳み傘", "rakuten_url": "", "thumb_url": "", "date": "2026-05-16"}, {"name": "電気鍋", "rakuten_url": "", "thumb_url": "", "date": "2026-05-15"}, {"name": "耳かき", "rakuten_url": "", "thumb_url": "", "date": "2026-05-15"}, {"name": "ウォーターフロス", "rakuten_url": "", "thumb_url": "", "date": "2026-05-15"}];
-
+const products = [{"name": "汗染みできないシャツ", "rakuten_url": "", "thumb_url": "", "date": "2026-06-24"}, {"name": "シーリングファンライト 　大", "rakuten_url": "", "thumb_url": "", "date": "2026-06-20"}, {"name": "超音波防虫器", "rakuten_url": "", "thumb_url": "", "date": "2026-06-17"}, {"name": "Hoshiakari シーリングファンライト", "rakuten_url": "", "thumb_url": "", "date": "2026-06-15"}, {"name": "車フロントガラス用サンシェード", "rakuten_url": "", "thumb_url": "", "date": "2026-06-15"}, {"name": "こどもアウトプット図鑑", "rakuten_url": "", "thumb_url": "", "date": "2026-06-15"}, {"name": "電気殺虫機", "rakuten_url": "", "thumb_url": "", "date": "2026-06-13"}, {"name": "かわすい うなぎ", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "ボトルショルダー", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "松屋 うなぎは", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "HUAWEI FreeClip2", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "HUAWEI Band11", "rakuten_url": "", "thumb_url": "", "date": "2026-06-11"}, {"name": "3in1充電器", "rakuten_url": "", "thumb_url": "", "date": "2026-06-10"}, {"name": "炭酸水", "rakuten_url": "", "thumb_url": "", "date": "2026-06-02"}, {"name": "助手席バッグ", "rakuten_url": "", "thumb_url": "", "date": "2026-06-02"}, {"name": "炭酸水筒", "rakuten_url": "", "thumb_url": "", "date": "2026-06-02"}, {"name": "サンシェード", "rakuten_url": "", "thumb_url": "", "date": "2026-06-01"}, {"name": "ストリームコントローラー", "rakuten_url": "", "thumb_url": "", "date": "2026-06-01"}, {"name": "冷感布団", "rakuten_url": "", "thumb_url": "", "date": "2026-05-30"}, {"name": "排水口", "rakuten_url": "", "thumb_url": "", "date": "2026-05-28"}, {"name": "シェイバー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "スマートウォッチ", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "布団クリーナー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "レディースシェーバー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "ポータブル電源", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "腰付ファン", "rakuten_url": "", "thumb_url": "", "date": "2026-05-26"}, {"name": "光脱毛機", "rakuten_url": "", "thumb_url": "", "date": "2026-05-21"}, {"name": "タブレット", "rakuten_url": "", "thumb_url": "", "date": "2026-05-21"}, {"name": "バッテリー", "rakuten_url": "", "thumb_url": "", "date": "2026-05-19"}, {"name": "折り畳み傘", "rakuten_url": "", "thumb_url": "", "date": "2026-05-16"}, {"name": "電気鍋", "rakuten_url": "", "thumb_url": "", "date": "2026-05-15"}, {"name": "耳かき", "rakuten_url": "", "thumb_url": "", "date": "2026-05-15"}, {"name": "ウォーターフロス", "rakuten_url": "", "thumb_url": "", "date": "2026-05-15"}];
 function renderProducts(filter) {
   const grid = document.getElementById('productGrid');
   const countEl = document.getElementById('countText');
   const q = (filter || '').toLowerCase();
-  const filtered = q
-    ? products.filter(p => p.name.toLowerCase().includes(q))
-    : products;
-
+  const filtered = q ? products.filter(p => p.name.toLowerCase().includes(q)) : products;
   countEl.textContent = filtered.length + ' アイテム';
-
   if (filtered.length === 0) {
     grid.innerHTML = '<div class="no-results">該当する商品がありません</div>';
     return;
   }
-
   grid.innerHTML = filtered.map(p => {
     const thumbHtml = p.thumb_url
       ? '<img src="' + p.thumb_url + '" alt="' + p.name + '" loading="lazy">'
@@ -239,21 +168,13 @@ function renderProducts(filter) {
     const btnClass = p.rakuten_url ? 'card-btn' : 'card-btn disabled';
     const btnHref = p.rakuten_url || '#';
     const btnText = p.rakuten_url ? '楽天で見る' : '準備中';
-    return '<div class="card">' +
-      '<div class="card-thumb">' + thumbHtml + '</div>' +
-      '<div class="card-body">' +
-        '<div class="card-name">' + p.name + '</div>' +
-        '<div class="card-date">' + p.date + '</div>' +
-        '<a href="' + btnHref + '" target="_blank" rel="noopener noreferrer" class="' + btnClass + '">' + btnText + '</a>' +
-      '</div>' +
-    '</div>';
+    return '<div class="card"><div class="card-thumb">' + thumbHtml + '</div><div class="card-body">' +
+      '<div class="card-name">' + p.name + '</div><div class="card-date">' + p.date + '</div>' +
+      '<a href="' + btnHref + '" target="_blank" rel="noopener noreferrer" class="' + btnClass + '">' + btnText + '</a>' +
+      '</div></div>';
   }).join('');
 }
-
-document.getElementById('searchInput').addEventListener('input', function() {
-  renderProducts(this.value);
-});
-
+document.getElementById('searchInput').addEventListener('input', function() { renderProducts(this.value); });
 renderProducts('');
 </script>
 </body>
