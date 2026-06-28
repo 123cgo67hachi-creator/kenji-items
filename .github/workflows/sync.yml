@@ -2,8 +2,18 @@ name: Sync Catalog from Notion
 
 on:
   workflow_dispatch:
+    inputs:
+      product_name:
+        description: '商品名（admin経由の場合）'
+        required: false
+      rakuten_url:
+        description: '楽天リンク（admin経由の場合）'
+        required: false
+      image_filename:
+        description: '画像ファイル名（admin経由の場合）'
+        required: false
   schedule:
-    - cron: '30 20 * * *'  # 毎日 05:30 JST
+    - cron: '30 20 * * *'
 
 permissions:
   contents: write
@@ -19,6 +29,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Update Notion if admin input provided
+        if: inputs.product_name != ''
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          PRODUCT_NAME: ${{ inputs.product_name }}
+          RAKUTEN_URL: ${{ inputs.rakuten_url }}
+          IMAGE_FILENAME: ${{ inputs.image_filename }}
+        run: python3 update_notion.py
 
       - name: Generate catalog from Notion
         env:
