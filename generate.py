@@ -60,6 +60,11 @@ def parse_products(results):
         }
         index[display] = p
         products.append(p)
+
+    # Notion側で最終更新日の降順に取得済み。その順序を保ったまま（sortは安定）、
+    # 楽天リンクのある「買える商品」を前に出す。案件ページは毎朝の自動処理でも
+    # 更新日が動くため、更新日だけで並べると準備中の商品が上に来てしまう。
+    products.sort(key=lambda p: not p["rakuten_url"])
     return products
 
 def generate_html(products):
