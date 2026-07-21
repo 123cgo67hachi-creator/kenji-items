@@ -5,6 +5,7 @@ NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 DB_ID = "fd7b3071-f92a-46d6-8cf4-0eab85108bf9"
 PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "")
 RAKUTEN_URL = os.environ.get("RAKUTEN_URL", "")
+TIKTOK_URL = os.environ.get("TIKTOK_URL", "")
 IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME", "")
 PAGES_BASE = "https://123cgo67hachi-creator.github.io/kenji-items"
 
@@ -44,10 +45,12 @@ def find_pages_by_name(name):
         cursor = data["next_cursor"]
     return matches
 
-def update_page(page_id, rakuten_url=None, thumb_url=None):
+def update_page(page_id, rakuten_url=None, tiktok_url=None, thumb_url=None):
     props = {}
     if rakuten_url:
         props["楽天リンク"] = {"url": rakuten_url}
+    if tiktok_url:
+        props["TikTokリンク"] = {"url": tiktok_url}
     if thumb_url:
         props["サムネURL"] = {"url": thumb_url}
     if not props:
@@ -79,5 +82,5 @@ if __name__ == "__main__":
         print(f"ERROR: ステータス=投稿済み に '{PRODUCT_NAME}' が見つかりません")
         exit(1)
     for pid in pages:
-        update_page(pid, RAKUTEN_URL or None, thumb_url)
+        update_page(pid, RAKUTEN_URL or None, TIKTOK_URL or None, thumb_url)
         print(f"  Updated: {pid}")

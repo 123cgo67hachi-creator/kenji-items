@@ -9,6 +9,9 @@ on:
       rakuten_url:
         description: '楽天リンク（admin経由の場合）'
         required: false
+      tiktok_url:
+        description: 'TikTokショップリンク（admin経由の場合）'
+        required: false
       image_filename:
         description: '画像ファイル名（admin経由の場合）'
         required: false
@@ -36,6 +39,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           PRODUCT_NAME: ${{ inputs.product_name }}
           RAKUTEN_URL: ${{ inputs.rakuten_url }}
+          TIKTOK_URL: ${{ inputs.tiktok_url }}
           IMAGE_FILENAME: ${{ inputs.image_filename }}
         run: python3 update_notion.py
 

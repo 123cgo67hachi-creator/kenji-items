@@ -45,16 +45,19 @@ def parse_products(results):
             continue
         display = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', raw).strip()
         rakuten = props.get("楽天リンク", {}).get("url", "") or ""
+        tiktok = props.get("TikTokリンク", {}).get("url", "") or ""
         thumb = props.get("サムネURL", {}).get("url", "") or ""
         if display in index:
             # 同名（①②）は1枚にまとめる。リンク・画像は入っている方を採用
             p = index[display]
             p["rakuten_url"] = p["rakuten_url"] or rakuten
+            p["tiktok_url"] = p["tiktok_url"] or tiktok
             p["thumb_url"] = p["thumb_url"] or thumb
             continue
         p = {
             "name": display,
             "rakuten_url": rakuten,
+            "tiktok_url": tiktok,
             "thumb_url": thumb,
             "date": r.get("created_time", "")[:10],
         }
@@ -62,9 +65,9 @@ def parse_products(results):
         products.append(p)
 
     # Notion側で最終更新日の降順に取得済み。その順序を保ったまま（sortは安定）、
-    # 楽天リンクのある「買える商品」を前に出す。案件ページは毎朝の自動処理でも
+    # リンクのある「買える商品」を前に出す。案件ページは毎朝の自動処理でも
     # 更新日が動くため、更新日だけで並べると準備中の商品が上に来てしまう。
-    products.sort(key=lambda p: not p["rakuten_url"])
+    products.sort(key=lambda p: not (p["rakuten_url"] or p["tiktok_url"]))
     return products
 
 def generate_html(products):
@@ -176,21 +179,40 @@ body {{
   overflow: hidden;
 }}
 .card-date {{ font-size: 0.65rem; color: #999; }}
+.card-links {{
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}}
 .card-btn {{
   display: block;
   text-align: center;
   padding: 0.5rem;
-  background: #bf0000;
-  color: white;
   text-decoration: none;
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 8px;
-  margin-top: auto;
-  transition: background 0.15s;
+  border: 1.5px solid transparent;
+  transition: opacity 0.15s;
 }}
-.card-btn:hover {{ background: #a00; }}
-.card-btn.disabled {{ background: #ccc; pointer-events: none; }}
+.card-btn:active {{ opacity: 0.7; }}
+/* TikTokショップ＝主導線。塗りつぶしの黒で目立たせる */
+.btn-tiktok {{ background: #000; color: #fff; }}
+/* 楽天＝副導線。枠線だけにして一段控えめに見せる */
+.btn-rakuten {{ background: #fff; color: #bf0000; border-color: #bf0000; }}
+.btn-note {{
+  font-size: 0.6rem;
+  color: #888;
+  text-align: center;
+  line-height: 1.3;
+  margin-top: -0.15rem;
+}}
+.card-btn.disabled {{
+  background: #f0f0f2;
+  color: #aaa;
+  pointer-events: none;
+}}
 .no-results {{ grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #999; }}
 .footer {{
   text-align: center;
@@ -239,12 +261,21 @@ function renderProducts(filter) {{
     const thumbHtml = p.thumb_url
       ? '<img src="' + p.thumb_url + '" alt="' + p.name + '" loading="lazy">'
       : '<span>&#128230;</span>';
-    const btnClass = p.rakuten_url ? 'card-btn' : 'card-btn disabled';
-    const btnHref = p.rakuten_url || '#';
-    const btnText = p.rakuten_url ? '楽天で見る' : '準備中';
+    // リンクが無い方のボタンは出さない。両方無いときだけ「準備中」を出す
+    let linksHtml = '';
+    if (p.tiktok_url) {{
+      linksHtml += '<a href="' + p.tiktok_url + '" target="_blank" rel="noopener noreferrer nofollow" class="card-btn btn-tiktok">TikTokで見る</a>' +
+        '<div class="btn-note">クーポンが出ることがあります</div>';
+    }}
+    if (p.rakuten_url) {{
+      linksHtml += '<a href="' + p.rakuten_url + '" target="_blank" rel="noopener noreferrer nofollow" class="card-btn btn-rakuten">楽天で見る</a>';
+    }}
+    if (!linksHtml) {{
+      linksHtml = '<span class="card-btn disabled">準備中</span>';
+    }}
     return '<div class="card"><div class="card-thumb">' + thumbHtml + '</div><div class="card-body">' +
       '<div class="card-name">' + p.name + '</div><div class="card-date">' + p.date + '</div>' +
-      '<a href="' + btnHref + '" target="_blank" rel="noopener noreferrer" class="' + btnClass + '">' + btnText + '</a>' +
+      '<div class="card-links">' + linksHtml + '</div>' +
       '</div></div>';
   }}).join('');
 }}
