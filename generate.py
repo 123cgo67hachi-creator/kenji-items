@@ -11,7 +11,7 @@ def query_notion():
     while True:
         body = {
             "filter": {"property": "ステータス", "select": {"equals": "投稿済み"}},
-            "sorts": [{"timestamp": "created_time", "direction": "descending"}],
+            "sorts": [{"timestamp": "last_edited_time", "direction": "descending"}],
             "page_size": 100
         }
         if cursor:
@@ -36,7 +36,7 @@ def query_notion():
 
 def parse_products(results):
     products = []
-    seen = set()
+    index = {}
     for r in results:
         props = r["properties"]
         name_arr = props.get("商品名", {}).get("title", [])
@@ -44,15 +44,22 @@ def parse_products(results):
         if not raw:
             continue
         display = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', raw).strip()
-        if display in seen:
+        rakuten = props.get("楽天リンク", {}).get("url", "") or ""
+        thumb = props.get("サムネURL", {}).get("url", "") or ""
+        if display in index:
+            # 同名（①②）は1枚にまとめる。リンク・画像は入っている方を採用
+            p = index[display]
+            p["rakuten_url"] = p["rakuten_url"] or rakuten
+            p["thumb_url"] = p["thumb_url"] or thumb
             continue
-        seen.add(display)
-        products.append({
+        p = {
             "name": display,
-            "rakuten_url": props.get("楽天リンク", {}).get("url", "") or "",
-            "thumb_url": props.get("サムネURL", {}).get("url", "") or "",
+            "rakuten_url": rakuten,
+            "thumb_url": thumb,
             "date": r.get("created_time", "")[:10],
-        })
+        }
+        index[display] = p
+        products.append(p)
     return products
 
 def generate_html(products):

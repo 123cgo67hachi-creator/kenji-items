@@ -10,30 +10,38 @@ PAGES_BASE = "https://123cgo67hachi-creator.github.io/kenji-items"
 
 def find_pages_by_name(name):
     clean = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', name).strip()
-    body = {
-        "filter": {"property": "ステータス", "select": {"equals": "投稿済み"}},
-        "page_size": 100
-    }
-    req = urllib.request.Request(
-        f"https://api.notion.com/v1/databases/{DB_ID}/query",
-        data=json.dumps(body).encode(),
-        headers={
-            "Authorization": f"Bearer {NOTION_TOKEN}",
-            "Notion-Version": "2022-06-28",
-            "Content-Type": "application/json"
-        },
-        method="POST"
-    )
-    with urllib.request.urlopen(req) as resp:
-        data = json.loads(resp.read())
-
     matches = []
-    for r in data["results"]:
-        title_arr = r["properties"].get("商品名", {}).get("title", [])
-        title = title_arr[0].get("plain_text", "") if title_arr else ""
-        title_clean = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', title).strip()
-        if title_clean == clean:
-            matches.append(r["id"])
+    cursor = None
+    while True:
+        body = {
+            "filter": {"property": "ステータス", "select": {"equals": "投稿済み"}},
+            "page_size": 100
+        }
+        if cursor:
+            body["start_cursor"] = cursor
+        req = urllib.request.Request(
+            f"https://api.notion.com/v1/databases/{DB_ID}/query",
+            data=json.dumps(body).encode(),
+            headers={
+                "Authorization": f"Bearer {NOTION_TOKEN}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read())
+
+        for r in data["results"]:
+            title_arr = r["properties"].get("商品名", {}).get("title", [])
+            title = title_arr[0].get("plain_text", "") if title_arr else ""
+            title_clean = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', title).strip()
+            if title_clean == clean:
+                matches.append(r["id"])
+
+        if not data.get("has_more"):
+            break
+        cursor = data["next_cursor"]
     return matches
 
 def update_page(page_id, rakuten_url=None, thumb_url=None):
@@ -66,6 +74,10 @@ if __name__ == "__main__":
     thumb_url = f"{PAGES_BASE}/images/{IMAGE_FILENAME}" if IMAGE_FILENAME else None
     pages = find_pages_by_name(PRODUCT_NAME)
     print(f"Found {len(pages)} pages for '{PRODUCT_NAME}'")
+    if not pages:
+        # 無言で成功扱いにすると気づけないので、ここで落とす
+        print(f"ERROR: ステータス=投稿済み に '{PRODUCT_NAME}' が見つかりません")
+        exit(1)
     for pid in pages:
         update_page(pid, RAKUTEN_URL or None, thumb_url)
         print(f"  Updated: {pid}")
