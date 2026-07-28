@@ -9,8 +9,13 @@ TIKTOK_URL = os.environ.get("TIKTOK_URL", "")
 IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME", "")
 PAGES_BASE = "https://123cgo67hachi-creator.github.io/kenji-items"
 
+def clean_name(raw):
+    # 「冷感ポンチョ ① 」のように①の後ろに空白があると末尾判定に失敗するため、
+    # 先に前後の空白を落としてから①〜⑩を外す（generate.py と必ず同じ規則にする）
+    return re.sub(r'\s*[①②③④⑤⑥⑦⑧⑨⑩]\s*$', '', (raw or "").strip()).strip()
+
 def find_pages_by_name(name):
-    clean = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', name).strip()
+    clean = clean_name(name)
     matches = []
     cursor = None
     while True:
@@ -36,7 +41,7 @@ def find_pages_by_name(name):
         for r in data["results"]:
             title_arr = r["properties"].get("商品名", {}).get("title", [])
             title = title_arr[0].get("plain_text", "") if title_arr else ""
-            title_clean = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', title).strip()
+            title_clean = clean_name(title)
             if title_clean == clean:
                 matches.append(r["id"])
 

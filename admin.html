@@ -50,6 +50,95 @@ input[type="text"], input[type="url"], select {
 }
 input:focus, select:focus { border-color: #0f3460; }
 
+/* 商品名のキーワード検索（旧: select） */
+.combo-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+.combo-tools .chk {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+}
+.combo-tools .chk input { width: auto; }
+.product-list {
+  margin-top: 0.4rem;
+  border: 1.5px solid #e5e5ea;
+  border-radius: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.product-item {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f0f0f2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.product-item:last-child { border-bottom: none; }
+.product-item:active, .product-item.active { background: #f0f4ff; }
+.product-item .flag {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #f0f0f2;
+  color: #999;
+}
+.product-item .flag.done { background: #d4edda; color: #155724; }
+.product-empty {
+  padding: 1rem 0.75rem;
+  font-size: 0.85rem;
+  color: #999;
+  text-align: center;
+}
+.btn-new {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  border: 1.5px dashed #ccc;
+  border-radius: 10px;
+  background: white;
+  color: #0f3460;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.selected-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem;
+  border: 1.5px solid #0f3460;
+  border-radius: 10px;
+  background: #f0f4ff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.chip-clear {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: #0f3460;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+  cursor: pointer;
+}
+
 .dropzone {
   border: 2px dashed #ccc;
   border-radius: 12px;
@@ -131,9 +220,19 @@ input:focus, select:focus { border-color: #0f3460; }
   <!-- Main Form -->
   <div class="form-card" id="mainForm" style="display:none;">
     <label>商品名</label>
-    <select id="productSelect">
-      <option value="">選択してください</option>
-    </select>
+    <div id="comboBox">
+      <input type="text" id="productSearch" placeholder="キーワードで検索（例: 加湿器、シェイバー）" autocomplete="off">
+      <div class="combo-tools">
+        <label class="chk"><input type="checkbox" id="onlyUnset"> リンク未設定のみ</label>
+        <span id="comboCount"></span>
+      </div>
+      <div class="product-list" id="productList"></div>
+      <button type="button" class="btn-new" onclick="addNewProduct()">＋ 新しい商品を追加</button>
+    </div>
+    <div class="selected-chip" id="selectedChip" style="display:none;">
+      <span id="selectedName"></span>
+      <button type="button" class="chip-clear" onclick="clearSelection()" title="選び直す">&times;</button>
+    </div>
 
     <label>TikTokショップ アフィリエイトURL</label>
     <input type="url" id="tiktokUrl" placeholder="https://vt.tiktok.com/xxxxx">
@@ -162,6 +261,10 @@ const REPO = '123cgo67hachi-creator/kenji-items';
 const REPO_API = `https://api.github.com/repos/${REPO}`;
 
 let selectedFile = null;
+let allProducts = [];
+let filteredProducts = [];
+let selectedProduct = null;
+let activeIndex = -1;
 
 // Token management
 function getToken() { return localStorage.getItem('gh_token'); }
@@ -193,45 +296,127 @@ async function init() {
 }
 
 // Load product list from current index.html's embedded JSON
+// index.html は毎朝5:30(JST)のsync.ymlがNotionから再生成する。ここは常に最新を読む
 async function loadProducts() {
   try {
-    const resp = await fetch('index.html');
+    const resp = await fetch(`index.html?t=${Date.now()}`, { cache: 'no-store' });
     const html = await resp.text();
     const match = html.match(/const products = (\[.*?\]);/s);
     if (match) {
-      const products = JSON.parse(match[1]);
-      const sel = document.getElementById('productSelect');
-      sel.innerHTML = '<option value="">選択してください</option>' +
-        '<option value="__new__">＋ 新しい商品を追加</option>' +
-        products.map(p =>
-          `<option value="${p.name}" data-url="${p.rakuten_url}" data-tiktok="${p.tiktok_url || ''}">${p.name}${(p.rakuten_url || p.tiktok_url) ? ' ✓' : ''}</option>`
-        ).join('');
+      allProducts = JSON.parse(match[1]);
     }
   } catch (e) {
     console.error('Failed to load products:', e);
   }
+  renderProductList();
 }
 
-// Product selection
-document.getElementById('productSelect').addEventListener('change', function() {
-  if (this.value === '__new__') {
-    const name = prompt('商品名を入力:');
-    if (name) {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      opt.selected = true;
-      this.insertBefore(opt, this.lastElementChild);
-    } else {
-      this.value = '';
-    }
+// 検索用の正規化：全角/半角・大文字小文字・カタカナ/ひらがな・記号や空白の差を吸収する。
+// 商品名は表記ゆれが多く、「ぼうちゅう」でも「防虫」以外の候補を拾えるようにするため。
+function normalizeKey(s) {
+  return (s || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[\s　ー・\-_,、.。/()（）\[\]【】]/g, '');
+}
+
+// スペース区切りは AND 検索（例:「防虫 器」）
+function matchesQuery(name, query) {
+  const terms = (query || '').trim().split(/[\s　]+/).map(normalizeKey).filter(Boolean);
+  if (!terms.length) return true;
+  const key = normalizeKey(name);
+  return terms.every(t => key.includes(t));
+}
+
+function hasLink(p) { return !!(p.rakuten_url || p.tiktok_url); }
+
+function renderProductList() {
+  const q = document.getElementById('productSearch').value;
+  const onlyUnset = document.getElementById('onlyUnset').checked;
+  const listEl = document.getElementById('productList');
+  const countEl = document.getElementById('comboCount');
+
+  filteredProducts = allProducts
+    .filter(p => (onlyUnset ? !hasLink(p) : true))
+    .filter(p => matchesQuery(p.name, q));
+
+  countEl.textContent = `${filteredProducts.length} / ${allProducts.length} 件`;
+  activeIndex = -1;
+  listEl.innerHTML = '';
+
+  if (!filteredProducts.length) {
+    const empty = document.createElement('div');
+    empty.className = 'product-empty';
+    empty.textContent = allProducts.length ? '該当なし。別のキーワードで試してください' : '商品リストを読み込めませんでした';
+    listEl.appendChild(empty);
+    return;
   }
-  const selected = this.selectedOptions[0];
-  if (selected && selected.dataset.url) {
-    document.getElementById('rakutenUrl').value = selected.dataset.url;
-  }
-  if (selected && selected.dataset.tiktok) {
-    document.getElementById('tiktokUrl').value = selected.dataset.tiktok;
+
+  filteredProducts.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'product-item';
+    row.dataset.index = i;
+
+    const flag = document.createElement('span');
+    flag.className = 'flag' + (hasLink(p) ? ' done' : '');
+    flag.textContent = hasLink(p) ? '設定済' : '未設定';
+
+    const label = document.createElement('span');
+    label.textContent = p.name;  // 商品名はNotion由来。textContentでHTMLとして解釈させない
+
+    row.appendChild(flag);
+    row.appendChild(label);
+    row.addEventListener('click', () => selectProduct(p));
+    listEl.appendChild(row);
+  });
+}
+
+function setActive(i) {
+  const rows = document.querySelectorAll('#productList .product-item');
+  if (!rows.length) return;
+  activeIndex = Math.max(0, Math.min(rows.length - 1, i));
+  rows.forEach(r => r.classList.remove('active'));
+  const el = rows[activeIndex];
+  el.classList.add('active');
+  el.scrollIntoView({ block: 'nearest' });
+}
+
+function selectProduct(p) {
+  selectedProduct = p.name;
+  document.getElementById('selectedName').textContent = p.name;
+  document.getElementById('selectedChip').style.display = 'flex';
+  document.getElementById('comboBox').style.display = 'none';
+  // 既存のリンクがあれば初期値として入れる（上書きしたいときはそのまま編集）
+  document.getElementById('rakutenUrl').value = p.rakuten_url || '';
+  document.getElementById('tiktokUrl').value = p.tiktok_url || '';
+}
+
+function clearSelection() {
+  selectedProduct = null;
+  document.getElementById('selectedChip').style.display = 'none';
+  document.getElementById('comboBox').style.display = 'block';
+  const search = document.getElementById('productSearch');
+  search.value = '';
+  renderProductList();
+  search.focus();
+}
+
+function addNewProduct() {
+  const name = prompt('商品名を入力:', document.getElementById('productSearch').value.trim());
+  if (!name || !name.trim()) return;
+  selectProduct({ name: name.trim(), rakuten_url: '', tiktok_url: '' });
+}
+
+document.getElementById('productSearch').addEventListener('input', renderProductList);
+document.getElementById('onlyUnset').addEventListener('change', renderProductList);
+document.getElementById('productSearch').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIndex + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIndex - 1); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const i = activeIndex >= 0 ? activeIndex : 0;
+    if (filteredProducts[i]) selectProduct(filteredProducts[i]);
   }
 });
 
@@ -321,7 +506,7 @@ async function triggerSync(productName, rakutenUrl, tiktokUrl, imageFilename) {
 
 // Submit
 async function submit() {
-  const name = document.getElementById('productSelect').value;
+  const name = selectedProduct;
   const url = document.getElementById('rakutenUrl').value.trim();
   const tiktok = document.getElementById('tiktokUrl').value.trim();
 
@@ -348,7 +533,7 @@ async function submit() {
     dz.innerHTML = 'タップして画像を選択<br>またはドラッグ＆ドロップ';
     document.getElementById('rakutenUrl').value = '';
     document.getElementById('tiktokUrl').value = '';
-    document.getElementById('productSelect').value = '';
+    clearSelection();
 
   } catch (e) {
     showStatus('エラー: ' + e.message, 'error');

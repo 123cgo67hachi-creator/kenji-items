@@ -34,6 +34,11 @@ def query_notion():
         cursor = data["next_cursor"]
     return all_results
 
+def clean_name(raw):
+    # 「冷感ポンチョ ① 」のように①の後ろに空白があると末尾判定に失敗するため、
+    # 先に前後の空白を落としてから①〜⑩を外す（update_notion.py と必ず同じ規則にする）
+    return re.sub(r'\s*[①②③④⑤⑥⑦⑧⑨⑩]\s*$', '', (raw or "").strip()).strip()
+
 def parse_products(results):
     products = []
     index = {}
@@ -43,7 +48,7 @@ def parse_products(results):
         raw = name_arr[0].get("plain_text", "") if name_arr else ""
         if not raw:
             continue
-        display = re.sub(r'[①②③④⑤⑥⑦⑧⑨⑩]$', '', raw).strip()
+        display = clean_name(raw)
         rakuten = props.get("楽天リンク", {}).get("url", "") or ""
         tiktok = props.get("TikTokリンク", {}).get("url", "") or ""
         thumb = props.get("サムネURL", {}).get("url", "") or ""
