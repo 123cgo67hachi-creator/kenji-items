@@ -89,7 +89,8 @@ input:focus, select:focus { border-color: #0f3460; }
 }
 .product-item:last-child { border-bottom: none; }
 .product-item:active, .product-item.active { background: #f0f4ff; }
-.product-item .flag {
+.flag {
+  display: inline-block;
   flex-shrink: 0;
   font-size: 0.65rem;
   padding: 1px 6px;
@@ -97,7 +98,15 @@ input:focus, select:focus { border-color: #0f3460; }
   background: #f0f0f2;
   color: #999;
 }
-.product-item .flag.done { background: #d4edda; color: #155724; }
+.flag.done { background: #d4edda; color: #155724; }
+/* ステータスが「投稿」のまま＝まだカタログに出ていない候補。選べるが、出るのはリンクを入れてから */
+.flag.draft { background: #fff3cd; color: #856404; }
+.combo-note {
+  font-size: 0.7rem;
+  color: #999;
+  line-height: 1.5;
+  margin-top: 0.4rem;
+}
 .product-empty {
   padding: 1rem 0.75rem;
   font-size: 0.85rem;
@@ -227,6 +236,10 @@ input:focus, select:focus { border-color: #0f3460; }
         <span id="comboCount"></span>
       </div>
       <div class="product-list" id="productList"></div>
+      <p class="combo-note">
+        <span class="flag draft">未投稿</span>
+        はステータスが「投稿」の案件です。リンクを入れて送信するとカタログに載ります。
+      </p>
       <button type="button" class="btn-new" onclick="addNewProduct()">＋ 新しい商品を追加</button>
     </div>
     <div class="selected-chip" id="selectedChip" style="display:none;">
@@ -361,11 +374,19 @@ function renderProductList() {
     const flag = document.createElement('span');
     flag.className = 'flag' + (hasLink(p) ? ' done' : '');
     flag.textContent = hasLink(p) ? '設定済' : '未設定';
+    row.appendChild(flag);
+
+    // 「投稿」止まりの案件はカタログに未掲載。選べるが、公開されるのはリンクを入れてから
+    if (p.posted === false) {
+      const draft = document.createElement('span');
+      draft.className = 'flag draft';
+      draft.textContent = '未投稿';
+      row.appendChild(draft);
+    }
 
     const label = document.createElement('span');
     label.textContent = p.name;  // 商品名はNotion由来。textContentでHTMLとして解釈させない
 
-    row.appendChild(flag);
     row.appendChild(label);
     row.addEventListener('click', () => selectProduct(p));
     listEl.appendChild(row);

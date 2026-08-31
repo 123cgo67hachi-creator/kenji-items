@@ -9,6 +9,12 @@ TIKTOK_URL = os.environ.get("TIKTOK_URL", "")
 IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME", "")
 PAGES_BASE = "https://123cgo67hachi-creator.github.io/kenji-items"
 
+# 書き戻し対象として案件管理表から探すステータス。
+# 「投稿済み」だけにしていたため、投稿工程に入っただけの案件（例: SONAERUの簡易トイレ・凝固剤）は
+# 管理ページから送信しても「見つかりません」で落ちて、リンクを貼れなかった。
+# generate.py の TARGET_STATUSES と必ず同じにする。
+TARGET_STATUSES = ["投稿済み", "投稿"]
+
 def clean_name(raw):
     # 「冷感ポンチョ ① 」のように①の後ろに空白があると末尾判定に失敗するため、
     # 先に前後の空白を落としてから①〜⑩を外す（generate.py と必ず同じ規則にする）
@@ -20,7 +26,9 @@ def find_pages_by_name(name):
     cursor = None
     while True:
         body = {
-            "filter": {"property": "ステータス", "select": {"equals": "投稿済み"}},
+            "filter": {"or": [
+                {"property": "ステータス", "select": {"equals": st}} for st in TARGET_STATUSES
+            ]},
             "page_size": 100
         }
         if cursor:
@@ -84,7 +92,8 @@ if __name__ == "__main__":
     print(f"Found {len(pages)} pages for '{PRODUCT_NAME}'")
     if not pages:
         # 無言で成功扱いにすると気づけないので、ここで落とす
-        print(f"ERROR: ステータス=投稿済み に '{PRODUCT_NAME}' が見つかりません")
+        statuses = "/".join(TARGET_STATUSES)
+        print(f"ERROR: ステータス={statuses} に '{PRODUCT_NAME}' が見つかりません")
         exit(1)
     for pid in pages:
         update_page(pid, RAKUTEN_URL or None, TIKTOK_URL or None, thumb_url)

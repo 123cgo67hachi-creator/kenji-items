@@ -5,12 +5,23 @@ from datetime import datetime, timezone, timedelta
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 DB_ID = "fd7b3071-f92a-46d6-8cf4-0eab85108bf9"
 
+# カタログの候補として案件管理表から拾うステータス。
+# 「投稿」は撮影・編集が終わって投稿工程に入ったもの。ここを「投稿済み」だけにしていたため、
+# 案件管理表にはあるのに横展開リストに出てこない取りこぼしが出ていた（例: SONAERUの簡易トイレ・凝固剤）。
+# ただし拾う＝公開ではない。未投稿の案件は購入リンクが入って初めてカードとして表示する
+# （HTML側の visibleProducts）。admin.html はこの配列全体を読むので、未公開の候補も選択できる。
+# update_notion.py の TARGET_STATUSES と必ず同じにする。
+TARGET_STATUSES = ["投稿済み", "投稿"]
+POSTED_STATUS = "投稿済み"
+
 def query_notion():
     all_results = []
     cursor = None
     while True:
         body = {
-            "filter": {"property": "ステータス", "select": {"equals": "投稿済み"}},
+            "filter": {"or": [
+                {"property": "ステータス", "select": {"equals": st}} for st in TARGET_STATUSES
+            ]},
             "sorts": [{"timestamp": "last_edited_time", "direction": "descending"}],
             "page_size": 100
         }
@@ -52,18 +63,23 @@ def parse_products(results):
         rakuten = props.get("楽天リンク", {}).get("url", "") or ""
         tiktok = props.get("TikTokリンク", {}).get("url", "") or ""
         thumb = props.get("サムネURL", {}).get("url", "") or ""
+        status = (props.get("ステータス", {}).get("select") or {}).get("name", "")
+        posted = status == POSTED_STATUS
         if display in index:
-            # 同名（①②）は1枚にまとめる。リンク・画像は入っている方を採用
+            # 同名（①②）は1枚にまとめる。リンク・画像は入っている方を採用。
+            # ①が投稿済みで②が投稿、のように混在するので、1つでも投稿済みなら投稿済み扱い
             p = index[display]
             p["rakuten_url"] = p["rakuten_url"] or rakuten
             p["tiktok_url"] = p["tiktok_url"] or tiktok
             p["thumb_url"] = p["thumb_url"] or thumb
+            p["posted"] = p["posted"] or posted
             continue
         p = {
             "name": display,
             "rakuten_url": rakuten,
             "tiktok_url": tiktok,
             "thumb_url": thumb,
+            "posted": posted,
             "date": r.get("created_time", "")[:10],
         }
         index[display] = p
@@ -252,11 +268,16 @@ body {{
 </div>
 <script>
 const products = {products_json};
+// 案件管理表からは「投稿済み」に加えて「投稿」（投稿工程に入ったもの）も取り込んでいる。
+// ただし未投稿の案件をそのまま公開すると、まだ出していない商品がカタログに並んでしまう。
+// 購入リンクを入れる＝管理ページで「載せる」と決めた操作なので、それを公開の合図にする。
+// products 配列そのものは admin.html が商品リストとして読むため、未公開の候補も残しておく。
+const visibleProducts = products.filter(p => p.posted || p.rakuten_url || p.tiktok_url);
 function renderProducts(filter) {{
   const grid = document.getElementById('productGrid');
   const countEl = document.getElementById('countText');
   const q = (filter || '').toLowerCase();
-  const filtered = q ? products.filter(p => p.name.toLowerCase().includes(q)) : products;
+  const filtered = q ? visibleProducts.filter(p => p.name.toLowerCase().includes(q)) : visibleProducts;
   countEl.textContent = filtered.length + ' アイテム';
   if (filtered.length === 0) {{
     grid.innerHTML = '<div class="no-results">該当する商品がありません</div>';
@@ -295,4 +316,5 @@ if __name__ == "__main__":
     products = parse_products(results)
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(generate_html(products))
-    print(f"Generated: {len(products)} products")
+    visible = [p for p in products if p["posted"] or p["rakuten_url"] or p["tiktok_url"]]
+    print(f"Generated: {len(visible)} visible / {len(products)} products")
