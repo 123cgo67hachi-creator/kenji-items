@@ -52,27 +52,49 @@ def parse_products(results):
         rakuten = props.get("楽天リンク", {}).get("url", "") or ""
         tiktok = props.get("TikTokリンク", {}).get("url", "") or ""
         thumb = props.get("サムネURL", {}).get("url", "") or ""
+        # 「表示順」は旦那様がadminから手で付ける固定順。小さいほど前。未設定はNone
+        order = props.get("表示順", {}).get("number", None)
+        # 並べ替えの基準日は投稿の実態に近い「動画納品日」。無ければ案件作成日で代用する
+        deliv = (props.get("動画納品日", {}).get("date") or {}).get("start", "") or ""
+        date = deliv[:10] or r.get("created_time", "")[:10]
         if display in index:
-            # 同名（①②）は1枚にまとめる。リンク・画像は入っている方を採用
+            # 同名（①②）は1枚にまとめる。リンク・画像・表示順は入っている方を採用
             p = index[display]
             p["rakuten_url"] = p["rakuten_url"] or rakuten
             p["tiktok_url"] = p["tiktok_url"] or tiktok
             p["thumb_url"] = p["thumb_url"] or thumb
+            if p["order"] is None:
+                p["order"] = order
+            if date > p["date"]:
+                p["date"] = date
             continue
         p = {
             "name": display,
             "rakuten_url": rakuten,
             "tiktok_url": tiktok,
             "thumb_url": thumb,
-            "date": r.get("created_time", "")[:10],
+            "date": date,
+            "order": order,
         }
         index[display] = p
         products.append(p)
 
-    # Notion側で最終更新日の降順に取得済み。その順序を保ったまま（sortは安定）、
-    # リンクのある「買える商品」を前に出す。案件ページは毎朝の自動処理でも
-    # 更新日が動くため、更新日だけで並べると準備中の商品が上に来てしまう。
-    products.sort(key=lambda p: not (p["rakuten_url"] or p["tiktok_url"]))
+    # 既定（おすすめ順）の並び。優先度は上から順に：
+    #   1. 「表示順」が入っているものを最優先（旦那様がadminで固定した順番）
+    #   2. 買えるもの（リンクあり）を前に
+    #   3. その中で新しい順
+    # 案件ページは毎朝の自動処理でも更新日が動くため、Notionの更新日順は使わない。
+    def sort_key(p):
+        has_order = p["order"] is not None
+        return (
+            0 if has_order else 1,
+            p["order"] if has_order else 0,
+            0 if (p["rakuten_url"] or p["tiktok_url"]) else 1,
+            # 日付は降順にしたいので文字列を反転比較する代わりに負のキーを作る
+            [-ord(c) for c in p["date"]],
+            p["name"],
+        )
+    products.sort(key=sort_key)
     return products
 
 def generate_html(products):
@@ -139,6 +161,33 @@ body {{
   font-size: 1rem;
 }}
 .count {{ text-align: center; font-size: 0.75rem; color: #888; padding: 0.25rem 0 0.5rem; }}
+.sortbar {{
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0 1rem 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}}
+.sortbar::-webkit-scrollbar {{ display: none; }}
+.sortbar button {{
+  flex: 0 0 auto;
+  border: 1px solid #d2d2d7;
+  background: #fff;
+  color: #444;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}}
+.sortbar button[aria-pressed="true"] {{
+  background: #1d1d1f;
+  border-color: #1d1d1f;
+  color: #fff;
+}}
+@media (min-width: 768px) {{ .sortbar {{ padding: 0 2rem 0.5rem; }} }}
 .grid {{
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -244,6 +293,13 @@ body {{
   <span class="search-icon">&#128269;</span>
   <input type="text" class="search-input" placeholder="商品を検索..." id="searchInput">
 </div>
+<div class="sortbar" id="sortBar">
+  <button data-sort="recommended" aria-pressed="true">おすすめ順</button>
+  <button data-sort="newest" aria-pressed="false">新しい順</button>
+  <button data-sort="oldest" aria-pressed="false">古い順</button>
+  <button data-sort="name" aria-pressed="false">名前順</button>
+  <button data-sort="buyable" aria-pressed="false">買えるものだけ</button>
+</div>
 <div class="count" id="countText"></div>
 <div class="grid" id="productGrid"></div>
 <div class="footer">
@@ -252,11 +308,26 @@ body {{
 </div>
 <script>
 const products = {products_json};
+// products は生成時点で「おすすめ順」に並んでいる。その並びを既定として保持する。
+const RECOMMENDED = products.slice();
+let currentSort = 'recommended';
+const hasLink = p => !!(p.tiktok_url || p.rakuten_url);
+
+function applySort(list) {{
+  const a = list.slice();
+  if (currentSort === 'newest')  return a.sort((x, y) => (y.date || '').localeCompare(x.date || ''));
+  if (currentSort === 'oldest')  return a.sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+  if (currentSort === 'name')    return a.sort((x, y) => x.name.localeCompare(y.name, 'ja'));
+  if (currentSort === 'buyable') return a.filter(hasLink);
+  return a; // おすすめ順＝生成時の並びのまま
+}}
+
 function renderProducts(filter) {{
   const grid = document.getElementById('productGrid');
   const countEl = document.getElementById('countText');
   const q = (filter || '').toLowerCase();
-  const filtered = q ? products.filter(p => p.name.toLowerCase().includes(q)) : products;
+  const base = currentSort === 'recommended' ? RECOMMENDED : applySort(RECOMMENDED);
+  const filtered = q ? base.filter(p => p.name.toLowerCase().includes(q)) : base;
   countEl.textContent = filtered.length + ' アイテム';
   if (filtered.length === 0) {{
     grid.innerHTML = '<div class="no-results">該当する商品がありません</div>';
@@ -285,6 +356,13 @@ function renderProducts(filter) {{
   }}).join('');
 }}
 document.getElementById('searchInput').addEventListener('input', function() {{ renderProducts(this.value); }});
+document.getElementById('sortBar').addEventListener('click', function(e) {{
+  const btn = e.target.closest('button[data-sort]');
+  if (!btn) return;
+  currentSort = btn.dataset.sort;
+  this.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  renderProducts(document.getElementById('searchInput').value);
+}});
 renderProducts('');
 </script>
 </body>

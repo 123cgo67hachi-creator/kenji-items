@@ -240,6 +240,9 @@ input:focus, select:focus { border-color: #0f3460; }
     <label>楽天アフィリエイトURL</label>
     <input type="url" id="rakutenUrl" placeholder="https://a.r10.to/xxxxx">
 
+    <label>表示順（任意）</label>
+    <input type="text" id="displayOrder" placeholder="1 = 一番上。空欄なら自動（おすすめ順）。clear で解除">
+
     <label>サムネイル画像</label>
     <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
       タップして画像を選択<br>またはドラッグ＆ドロップ
@@ -390,6 +393,7 @@ function selectProduct(p) {
   // 既存のリンクがあれば初期値として入れる（上書きしたいときはそのまま編集）
   document.getElementById('rakutenUrl').value = p.rakuten_url || '';
   document.getElementById('tiktokUrl').value = p.tiktok_url || '';
+  document.getElementById('displayOrder').value = (p.order === null || p.order === undefined) ? '' : p.order;
 }
 
 function clearSelection() {
@@ -405,7 +409,7 @@ function clearSelection() {
 function addNewProduct() {
   const name = prompt('商品名を入力:', document.getElementById('productSearch').value.trim());
   if (!name || !name.trim()) return;
-  selectProduct({ name: name.trim(), rakuten_url: '', tiktok_url: '' });
+  selectProduct({ name: name.trim(), rakuten_url: '', tiktok_url: '', order: null });
 }
 
 document.getElementById('productSearch').addEventListener('input', renderProductList);
@@ -486,14 +490,15 @@ async function uploadImage(name, file) {
 }
 
 // Trigger sync workflow
-async function triggerSync(productName, rakutenUrl, tiktokUrl, imageFilename) {
+async function triggerSync(productName, rakutenUrl, tiktokUrl, imageFilename, displayOrder) {
   const body = {
     ref: 'main',
     inputs: {
       product_name: productName || '',
       rakuten_url: rakutenUrl || '',
       tiktok_url: tiktokUrl || '',
-      image_filename: imageFilename || ''
+      image_filename: imageFilename || '',
+      display_order: displayOrder || ''
     }
   };
   const resp = await fetch(`${REPO_API}/actions/workflows/sync.yml/dispatches`, {
@@ -509,9 +514,11 @@ async function submit() {
   const name = selectedProduct;
   const url = document.getElementById('rakutenUrl').value.trim();
   const tiktok = document.getElementById('tiktokUrl').value.trim();
+  const order = document.getElementById('displayOrder').value.trim();
 
   if (!name) { showStatus('商品を選択してください', 'error'); return; }
-  if (!url && !tiktok && !selectedFile) { showStatus('URLか画像を入力してください', 'error'); return; }
+  if (!url && !tiktok && !selectedFile && !order) { showStatus('URL・画像・表示順のどれかを入力してください', 'error'); return; }
+  if (order && order !== 'clear' && isNaN(Number(order))) { showStatus('表示順は数字か clear を入れてください', 'error'); return; }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
@@ -525,7 +532,7 @@ async function submit() {
     }
 
     showStatus('同期トリガー中...', 'loading');
-    await triggerSync(name, url, tiktok, imageFilename);
+    await triggerSync(name, url, tiktok, imageFilename, order);
 
     showStatus('送信完了！ 1〜2分でカタログに反映されます。', 'success');
     selectedFile = null;
@@ -533,6 +540,7 @@ async function submit() {
     dz.innerHTML = 'タップして画像を選択<br>またはドラッグ＆ドロップ';
     document.getElementById('rakutenUrl').value = '';
     document.getElementById('tiktokUrl').value = '';
+    document.getElementById('displayOrder').value = '';
     clearSelection();
 
   } catch (e) {

@@ -7,6 +7,8 @@ PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "")
 RAKUTEN_URL = os.environ.get("RAKUTEN_URL", "")
 TIKTOK_URL = os.environ.get("TIKTOK_URL", "")
 IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME", "")
+# 表示順は旦那様がadminで付ける手動の並び順。空文字なら触らず、"clear"で解除する
+DISPLAY_ORDER = os.environ.get("DISPLAY_ORDER", "")
 PAGES_BASE = "https://123cgo67hachi-creator.github.io/kenji-items"
 
 def clean_name(raw):
@@ -50,8 +52,11 @@ def find_pages_by_name(name):
         cursor = data["next_cursor"]
     return matches
 
-def update_page(page_id, rakuten_url=None, tiktok_url=None, thumb_url=None):
+def update_page(page_id, rakuten_url=None, tiktok_url=None, thumb_url=None, display_order=""):
     props = {}
+    if display_order:
+        # "clear" は手動の並び順をやめて自動（おすすめ順）に戻す指示
+        props["表示順"] = {"number": None} if display_order == "clear" else {"number": float(display_order)}
     if rakuten_url:
         props["楽天リンク"] = {"url": rakuten_url}
     if tiktok_url:
@@ -87,5 +92,5 @@ if __name__ == "__main__":
         print(f"ERROR: ステータス=投稿済み に '{PRODUCT_NAME}' が見つかりません")
         exit(1)
     for pid in pages:
-        update_page(pid, RAKUTEN_URL or None, TIKTOK_URL or None, thumb_url)
+        update_page(pid, RAKUTEN_URL or None, TIKTOK_URL or None, thumb_url, DISPLAY_ORDER)
         print(f"  Updated: {pid}")
