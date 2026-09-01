@@ -18,6 +18,9 @@ on:
       display_order:
         description: '表示順（小さいほど前。clearで解除）'
         required: false
+      visibility:
+        description: 'カタログ表示（hide=隠す / show=表示）'
+        required: false
   schedule:
     - cron: '30 20 * * *'
 
@@ -45,6 +48,7 @@ jobs:
           TIKTOK_URL: ${{ inputs.tiktok_url }}
           IMAGE_FILENAME: ${{ inputs.image_filename }}
           DISPLAY_ORDER: ${{ inputs.display_order }}
+          VISIBILITY: ${{ inputs.visibility }}
         run: python3 update_notion.py
 
       - name: Generate catalog from Notion

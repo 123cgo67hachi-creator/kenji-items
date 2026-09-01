@@ -98,6 +98,7 @@ input:focus, select:focus { border-color: #0f3460; }
   color: #999;
 }
 .product-item .flag.done { background: #d4edda; color: #155724; }
+.product-item .flag.hidden-flag { background: #f0f0f2; color: #888; }
 .product-empty {
   padding: 1rem 0.75rem;
   font-size: 0.85rem;
@@ -224,6 +225,7 @@ input:focus, select:focus { border-color: #0f3460; }
       <input type="text" id="productSearch" placeholder="キーワードで検索（例: 加湿器、シェイバー）" autocomplete="off">
       <div class="combo-tools">
         <label class="chk"><input type="checkbox" id="onlyUnset"> リンク未設定のみ</label>
+        <label class="chk"><input type="checkbox" id="onlyHidden"> 非表示のみ</label>
         <span id="comboCount"></span>
       </div>
       <div class="product-list" id="productList"></div>
@@ -239,6 +241,10 @@ input:focus, select:focus { border-color: #0f3460; }
 
     <label>楽天アフィリエイトURL</label>
     <input type="url" id="rakutenUrl" placeholder="https://a.r10.to/xxxxx">
+
+    <label class="chk" style="margin:0.5rem 0;">
+      <input type="checkbox" id="hideFromCatalog"> カタログに表示しない（案件でない商品など）
+    </label>
 
     <label>表示順（任意）</label>
     <input type="text" id="displayOrder" placeholder="1 = 一番上。空欄なら自動（おすすめ順）。clear で解除">
@@ -337,11 +343,13 @@ function hasLink(p) { return !!(p.rakuten_url || p.tiktok_url); }
 function renderProductList() {
   const q = document.getElementById('productSearch').value;
   const onlyUnset = document.getElementById('onlyUnset').checked;
+  const onlyHidden = document.getElementById('onlyHidden').checked;
   const listEl = document.getElementById('productList');
   const countEl = document.getElementById('comboCount');
 
   filteredProducts = allProducts
     .filter(p => (onlyUnset ? !hasLink(p) : true))
+    .filter(p => (onlyHidden ? !!p.hidden : true))
     .filter(p => matchesQuery(p.name, q));
 
   countEl.textContent = `${filteredProducts.length} / ${allProducts.length} 件`;
@@ -369,6 +377,12 @@ function renderProductList() {
     label.textContent = p.name;  // 商品名はNotion由来。textContentでHTMLとして解釈させない
 
     row.appendChild(flag);
+    if (p.hidden) {
+      const h = document.createElement('span');
+      h.className = 'flag hidden-flag';
+      h.textContent = '非表示';
+      row.appendChild(h);
+    }
     row.appendChild(label);
     row.addEventListener('click', () => selectProduct(p));
     listEl.appendChild(row);
@@ -394,6 +408,7 @@ function selectProduct(p) {
   document.getElementById('rakutenUrl').value = p.rakuten_url || '';
   document.getElementById('tiktokUrl').value = p.tiktok_url || '';
   document.getElementById('displayOrder').value = (p.order === null || p.order === undefined) ? '' : p.order;
+  document.getElementById('hideFromCatalog').checked = !!p.hidden;
 }
 
 function clearSelection() {
@@ -409,11 +424,12 @@ function clearSelection() {
 function addNewProduct() {
   const name = prompt('商品名を入力:', document.getElementById('productSearch').value.trim());
   if (!name || !name.trim()) return;
-  selectProduct({ name: name.trim(), rakuten_url: '', tiktok_url: '', order: null });
+  selectProduct({ name: name.trim(), rakuten_url: '', tiktok_url: '', order: null, hidden: false });
 }
 
 document.getElementById('productSearch').addEventListener('input', renderProductList);
 document.getElementById('onlyUnset').addEventListener('change', renderProductList);
+document.getElementById('onlyHidden').addEventListener('change', renderProductList);
 document.getElementById('productSearch').addEventListener('keydown', e => {
   if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIndex + 1); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIndex - 1); }
@@ -490,7 +506,7 @@ async function uploadImage(name, file) {
 }
 
 // Trigger sync workflow
-async function triggerSync(productName, rakutenUrl, tiktokUrl, imageFilename, displayOrder) {
+async function triggerSync(productName, rakutenUrl, tiktokUrl, imageFilename, displayOrder, visibility) {
   const body = {
     ref: 'main',
     inputs: {
@@ -498,7 +514,8 @@ async function triggerSync(productName, rakutenUrl, tiktokUrl, imageFilename, di
       rakuten_url: rakutenUrl || '',
       tiktok_url: tiktokUrl || '',
       image_filename: imageFilename || '',
-      display_order: displayOrder || ''
+      display_order: displayOrder || '',
+      visibility: visibility || ''
     }
   };
   const resp = await fetch(`${REPO_API}/actions/workflows/sync.yml/dispatches`, {
@@ -515,9 +532,13 @@ async function submit() {
   const url = document.getElementById('rakutenUrl').value.trim();
   const tiktok = document.getElementById('tiktokUrl').value.trim();
   const order = document.getElementById('displayOrder').value.trim();
+  // 選択時の状態と変わっていたときだけ送る。空文字なら update_notion.py は触らない
+  const wantHidden = document.getElementById('hideFromCatalog').checked;
+  const wasHidden = !!(allProducts.find(p => p.name === name) || {}).hidden;
+  const visibility = (wantHidden === wasHidden) ? '' : (wantHidden ? 'hide' : 'show');
 
   if (!name) { showStatus('商品を選択してください', 'error'); return; }
-  if (!url && !tiktok && !selectedFile && !order) { showStatus('URL・画像・表示順のどれかを入力してください', 'error'); return; }
+  if (!url && !tiktok && !selectedFile && !order && !visibility) { showStatus('URL・画像・表示順・表示切替のどれかを操作してください', 'error'); return; }
   if (order && order !== 'clear' && isNaN(Number(order))) { showStatus('表示順は数字か clear を入れてください', 'error'); return; }
 
   const btn = document.getElementById('submitBtn');
@@ -532,7 +553,7 @@ async function submit() {
     }
 
     showStatus('同期トリガー中...', 'loading');
-    await triggerSync(name, url, tiktok, imageFilename, order);
+    await triggerSync(name, url, tiktok, imageFilename, order, visibility);
 
     showStatus('送信完了！ 1〜2分でカタログに反映されます。', 'success');
     selectedFile = null;
@@ -541,6 +562,7 @@ async function submit() {
     document.getElementById('rakutenUrl').value = '';
     document.getElementById('tiktokUrl').value = '';
     document.getElementById('displayOrder').value = '';
+    document.getElementById('hideFromCatalog').checked = false;
     clearSelection();
 
   } catch (e) {

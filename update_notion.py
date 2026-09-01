@@ -9,6 +9,8 @@ TIKTOK_URL = os.environ.get("TIKTOK_URL", "")
 IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME", "")
 # 表示順は旦那様がadminで付ける手動の並び順。空文字なら触らず、"clear"で解除する
 DISPLAY_ORDER = os.environ.get("DISPLAY_ORDER", "")
+# カタログ表示の切り替え。"hide"で隠す、"show"で戻す。空なら触らない
+VISIBILITY = os.environ.get("VISIBILITY", "")
 PAGES_BASE = "https://123cgo67hachi-creator.github.io/kenji-items"
 
 def clean_name(raw):
@@ -52,8 +54,10 @@ def find_pages_by_name(name):
         cursor = data["next_cursor"]
     return matches
 
-def update_page(page_id, rakuten_url=None, tiktok_url=None, thumb_url=None, display_order=""):
+def update_page(page_id, rakuten_url=None, tiktok_url=None, thumb_url=None, display_order="", visibility=""):
     props = {}
+    if visibility in ("hide", "show"):
+        props["カタログ非表示"] = {"checkbox": visibility == "hide"}
     if display_order:
         # "clear" は手動の並び順をやめて自動（おすすめ順）に戻す指示
         props["表示順"] = {"number": None} if display_order == "clear" else {"number": float(display_order)}
@@ -92,5 +96,5 @@ if __name__ == "__main__":
         print(f"ERROR: ステータス=投稿済み に '{PRODUCT_NAME}' が見つかりません")
         exit(1)
     for pid in pages:
-        update_page(pid, RAKUTEN_URL or None, TIKTOK_URL or None, thumb_url, DISPLAY_ORDER)
+        update_page(pid, RAKUTEN_URL or None, TIKTOK_URL or None, thumb_url, DISPLAY_ORDER, VISIBILITY)
         print(f"  Updated: {pid}")

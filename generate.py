@@ -54,6 +54,8 @@ def parse_products(results):
         thumb = props.get("サムネURL", {}).get("url", "") or ""
         # 「表示順」は旦那様がadminから手で付ける固定順。小さいほど前。未設定はNone
         order = props.get("表示順", {}).get("number", None)
+        # カタログに出したくないもの（案件でない商品など）。未チェック＝表示なので既存は無影響
+        hidden = bool(props.get("カタログ非表示", {}).get("checkbox", False))
         # 並べ替えの基準日は投稿の実態に近い「動画納品日」。無ければ案件作成日で代用する
         deliv = (props.get("動画納品日", {}).get("date") or {}).get("start", "") or ""
         date = deliv[:10] or r.get("created_time", "")[:10]
@@ -65,6 +67,8 @@ def parse_products(results):
             p["thumb_url"] = p["thumb_url"] or thumb
             if p["order"] is None:
                 p["order"] = order
+            # 同名ページのどれかが非表示なら非表示（adminは全ページまとめて更新するので食い違わない）
+            p["hidden"] = p["hidden"] or hidden
             if date > p["date"]:
                 p["date"] = date
             continue
@@ -75,6 +79,7 @@ def parse_products(results):
             "thumb_url": thumb,
             "date": date,
             "order": order,
+            "hidden": hidden,
         }
         index[display] = p
         products.append(p)
@@ -308,8 +313,11 @@ body {{
 </div>
 <script>
 const products = {products_json};
-// products は生成時点で「おすすめ順」に並んでいる。その並びを既定として保持する。
-const RECOMMENDED = products.slice();
+// products には非表示のものも入っている。adminが index.html の埋め込みJSONを
+// 読んで再表示できるようにするためで、カタログに描くのは表示ぶんだけ。
+const VISIBLE = products.filter(p => !p.hidden);
+// VISIBLE は生成時点で「おすすめ順」に並んでいる。その並びを既定として保持する。
+const RECOMMENDED = VISIBLE.slice();
 let currentSort = 'recommended';
 const hasLink = p => !!(p.tiktok_url || p.rakuten_url);
 

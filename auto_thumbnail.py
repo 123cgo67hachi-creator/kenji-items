@@ -92,14 +92,17 @@ def fetch_targets():
             name = clean_name(raw)
             thumb = props.get("サムネURL", {}).get("url") or ""
             ssd = "".join(x.get("plain_text", "") for x in props.get("SSDフォルダ名", {}).get("rich_text", [])).strip()
-            e = rows.setdefault(name, {"name": name, "thumb": "", "ssd": "", "ids": []})
+            hidden = bool(props.get("カタログ非表示", {}).get("checkbox", False))
+            e = rows.setdefault(name, {"name": name, "thumb": "", "ssd": "", "hidden": False, "ids": []})
             e["ids"].append(r["id"])
             e["thumb"] = e["thumb"] or thumb
             e["ssd"] = e["ssd"] or ssd
+            e["hidden"] = e["hidden"] or hidden
         if not d.get("has_more"):
             break
         cursor = d["next_cursor"]
-    return [v for v in rows.values() if not v["thumb"]]
+    # カタログに出さないものへ画像を作っても意味がないので除く
+    return [v for v in rows.values() if not v["thumb"] and not v["hidden"]]
 
 
 def set_thumb(page_ids, filename):
