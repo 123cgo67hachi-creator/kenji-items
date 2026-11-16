@@ -10,7 +10,15 @@ def query_notion():
     cursor = None
     while True:
         body = {
-            "filter": {"property": "ステータス", "select": {"equals": "投稿済み"}},
+            # 投稿済みに加え、OK直後（ステータス=投稿）でも楽天リンクがあれば載せる
+            # （2026-11-17：OKの時点でインスタに出すので、TikTokの公開を待つと一覧に商品が無い）
+            "filter": {"or": [
+                {"property": "ステータス", "select": {"equals": "投稿済み"}},
+                {"and": [
+                    {"property": "ステータス", "select": {"equals": "投稿"}},
+                    {"property": "楽天リンク", "url": {"is_not_empty": True}},
+                ]},
+            ]},
             "sorts": [{"timestamp": "last_edited_time", "direction": "descending"}],
             "page_size": 100
         }
